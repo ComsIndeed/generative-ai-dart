@@ -26,8 +26,8 @@ final class CountTokensResponse {
   /// Optional extra fields in the Vertex AI data model.
   final Map<String, Object?>? _extraFields;
 
-  CountTokensResponse(this.totalTokens) : _extraFields = null;
-  CountTokensResponse._(this.totalTokens, this._extraFields);
+  CountTokensResponse(this.totalTokens, {this.promptTokensDetails}) : _extraFields = null;
+  CountTokensResponse._(this.totalTokens, this._extraFields, {this.promptTokensDetails});
 }
 
 /// Returns the fields other than `totalTokens` that were parsed from JSON for
@@ -169,11 +169,82 @@ final class UsageMetadata {
   /// Total token count for the generation request (prompt + candidates).
   final int? totalTokenCount;
 
+  /// Token counts for each modality in the prompt.
+  final List<ModalityTokenCount>? promptTokensDetails;
+
+  /// Token counts for each modality in the candidates.
+  final List<ModalityTokenCount>? candidatesTokensDetails;
+
   UsageMetadata({
     this.promptTokenCount,
     this.candidatesTokenCount,
     this.totalTokenCount,
+    this.promptTokensDetails,
+    this.candidatesTokensDetails,
   });
+}
+
+/// Token count for a specific modality.
+final class ModalityTokenCount {
+  /// The modality of the content.
+  final ContentModality modality;
+
+  /// The token count for the modality.
+  final int tokenCount;
+
+  ModalityTokenCount(this.modality, this.tokenCount);
+}
+
+/// The modality of the content.
+enum ContentModality {
+  /// Unspecified content modality.
+  unspecified,
+
+  /// Text content modality.
+  text,
+
+  /// Image content modality.
+  image,
+
+  /// Video content modality.
+  video,
+
+  /// Audio content modality.
+  audio,
+
+  /// Document content modality.
+  document;
+
+  String toJson() => switch (this) {
+        unspecified => 'MODALITY_UNSPECIFIED',
+        text => 'TEXT',
+        image => 'IMAGE',
+        video => 'VIDEO',
+        audio => 'AUDIO',
+        document => 'DOCUMENT',
+      };
+}
+
+/// The desired modalities of the model's response.
+enum ResponseModalities {
+  /// Unspecified response modality.
+  unspecified,
+
+  /// Text response modality.
+  text,
+
+  /// Image response modality.
+  image,
+
+  /// Audio response modality.
+  audio;
+
+  String toJson() => switch (this) {
+        unspecified => 'RESPONSE_MODALITY_UNSPECIFIED',
+        text => 'TEXT',
+        image => 'IMAGE',
+        audio => 'AUDIO',
+      };
 }
 
 /// Response candidate generated from a [GenerativeModel].
@@ -353,13 +424,13 @@ enum HarmProbability {
 /// Source attributions for a piece of content.
 final class CitationMetadata {
   /// Citations to sources for a specific response.
-  final List<CitationSource> citationSources;
+  final List<Citation> citations;
 
-  CitationMetadata(this.citationSources);
+  CitationMetadata(this.citations);
 }
 
 /// Citation to a source for a portion of a specific response.
-final class CitationSource {
+final class Citation {
   /// Start of segment of the response that is attributed to this source.
   ///
   /// Index indicates the start of the segment, measured in bytes.
@@ -376,7 +447,7 @@ final class CitationSource {
   /// License info is required for code citations.
   final String? license;
 
-  CitationSource(this.startIndex, this.endIndex, this.uri, this.license);
+  Citation(this.startIndex, this.endIndex, this.uri, this.license);
 }
 
 /// Reason why a model stopped generating tokens.
@@ -426,10 +497,16 @@ final class SafetySetting {
   /// Controls the probability threshold at which harm is blocked.
   final HarmBlockThreshold threshold;
 
-  SafetySetting(this.category, this.threshold);
+  /// The method for blocking unsafe content.
+  final HarmBlockMethod? method;
 
-  Object toJson() =>
-      {'category': category.toJson(), 'threshold': threshold.toJson()};
+  SafetySetting(this.category, this.threshold, [this.method]);
+
+  Object toJson() => {
+        'category': category.toJson(),
+        'threshold': threshold.toJson(),
+        if (method case final method?) 'method': method.toJson(),
+      };
 }
 
 /// Probability of harm which causes content to be blocked.
@@ -458,6 +535,24 @@ enum HarmBlockThreshold {
         medium => 'BLOCK_MEDIUM_AND_ABOVE',
         high => 'BLOCK_ONLY_HIGH',
         none => 'BLOCK_NONE'
+      };
+}
+
+/// Method for blocking unsafe content.
+enum HarmBlockMethod {
+  /// The method is unspecified.
+  unspecified,
+
+  /// The method is probability.
+  probability,
+
+  /// The method is severity.
+  severity;
+
+  String toJson() => switch (this) {
+        unspecified => 'HARM_BLOCK_METHOD_UNSPECIFIED',
+        probability => 'PROBABILITY',
+        severity => 'SEVERITY',
       };
 }
 
@@ -508,6 +603,16 @@ final class GenerationConfig {
   /// Note: The default value varies by model.
   final int? topK;
 
+  /// The penalty for repeating tokens in the generated response.
+  ///
+  /// Values can range from `[0.0, 1.0]`, inclusive.
+  final double? presencePenalty;
+
+  /// The penalty for repeating tokens in the generated response.
+  ///
+  /// Values can range from `[0.0, 1.0]`, inclusive.
+  final double? frequencyPenalty;
+
   /// Output response mimetype of the generated candidate text.
   ///
   /// Supported mimetype:
@@ -521,6 +626,9 @@ final class GenerationConfig {
   ///   a schema; currently this is limited to `application/json`.
   final Schema? responseSchema;
 
+  /// The desired modalities of the model's response.
+  final List<ResponseModalities>? responseModalities;
+
   GenerationConfig({
     this.candidateCount,
     this.stopSequences = const [],
@@ -528,8 +636,11 @@ final class GenerationConfig {
     this.temperature,
     this.topP,
     this.topK,
+    this.presencePenalty,
+    this.frequencyPenalty,
     this.responseMimeType,
     this.responseSchema,
+    this.responseModalities,
   });
 
   Map<String, Object?> toJson() => {
@@ -541,12 +652,18 @@ final class GenerationConfig {
         if (temperature case final temperature?) 'temperature': temperature,
         if (topP case final topP?) 'topP': topP,
         if (topK case final topK?) 'topK': topK,
+        if (presencePenalty case final presencePenalty?)
+          'presencePenalty': presencePenalty,
+        if (frequencyPenalty case final frequencyPenalty?)
+          'frequencyPenalty': frequencyPenalty,
         if (responseMimeType case final responseMimeType?)
           'responseMimeType': responseMimeType,
         if (responseSchema case final responseSchema?)
           'responseSchema': responseSchema,
+        if (responseModalities case final responseModalities?)
+          'responseModalities':
+              responseModalities.map((e) => e.toJson()).toList(),
       };
-}
 
 /// Type of task for which the embedding will be used.
 enum TaskType {
@@ -605,11 +722,17 @@ CountTokensResponse parseCountTokensResponse(Object jsonObject) {
     final extraFields = {
       for (final entry in jsonObject.entries)
         if (entry.key case final String fieldName
-            when fieldName != 'totalTokens')
+            when fieldName != 'totalTokens' && fieldName != 'promptTokensDetails')
           fieldName: entry.value
     };
+    final promptTokensDetails = switch (jsonObject) {
+      {'promptTokensDetails': final List<Object?> details} =>
+        details.map(_parseModalityTokenCount).toList(),
+      _ => null,
+    };
     return CountTokensResponse._(totalTokens,
-        extraFields.isEmpty ? null : Map.unmodifiable(extraFields));
+        extraFields.isEmpty ? null : Map.unmodifiable(extraFields),
+        promptTokensDetails: promptTokensDetails);
   }
   throw unhandledFormat('CountTokensResponse', jsonObject);
 }
@@ -702,10 +825,32 @@ UsageMetadata _parseUsageMetadata(Object jsonObject) {
     {'totalTokenCount': final int totalTokenCount} => totalTokenCount,
     _ => null,
   };
+  final promptTokensDetails = switch (jsonObject) {
+    {'promptTokensDetails': final List<Object?> details} =>
+      details.map(_parseModalityTokenCount).toList(),
+    _ => null,
+  };
+  final candidatesTokensDetails = switch (jsonObject) {
+    {'candidatesTokensDetails': final List<Object?> details} =>
+      details.map(_parseModalityTokenCount).toList(),
+    _ => null,
+  };
   return UsageMetadata(
       promptTokenCount: promptTokenCount,
       candidatesTokenCount: candidatesTokenCount,
-      totalTokenCount: totalTokenCount);
+      totalTokenCount: totalTokenCount,
+      promptTokensDetails: promptTokensDetails,
+      candidatesTokensDetails: candidatesTokensDetails);
+}
+
+ModalityTokenCount _parseModalityTokenCount(Object? jsonObject) {
+  return switch (jsonObject) {
+    {'modality': final String modality, 'tokenCount': final int tokenCount} =>
+      ModalityTokenCount(ContentModality._parseValue(modality), tokenCount),
+    {'modality': final String modality} =>
+      ModalityTokenCount(ContentModality._parseValue(modality), 0),
+    _ => throw unhandledFormat('ModalityTokenCount', jsonObject),
+  };
 }
 
 SafetyRating _parseSafetyRating(Object? jsonObject) {
@@ -732,22 +877,22 @@ ContentEmbedding _parseContentEmbedding(Object? jsonObject) {
 CitationMetadata _parseCitationMetadata(Object? jsonObject) {
   return switch (jsonObject) {
     {'citationSources': final List<Object?> citationSources} =>
-      CitationMetadata(citationSources.map(_parseCitationSource).toList()),
+      CitationMetadata(citationSources.map(_parseCitation).toList()),
     // Vertex SDK format uses `citations`
     {'citations': final List<Object?> citationSources} =>
-      CitationMetadata(citationSources.map(_parseCitationSource).toList()),
+      CitationMetadata(citationSources.map(_parseCitation).toList()),
     _ => throw unhandledFormat('CitationMetadata', jsonObject),
   };
 }
 
-CitationSource _parseCitationSource(Object? jsonObject) {
+Citation _parseCitation(Object? jsonObject) {
   if (jsonObject is! Map) {
-    throw unhandledFormat('CitationSource', jsonObject);
+    throw unhandledFormat('Citation', jsonObject);
   }
 
   final uriString = jsonObject['uri'] as String?;
 
-  return CitationSource(
+  return Citation(
     jsonObject['startIndex'] as int?,
     jsonObject['endIndex'] as int?,
     uriString != null ? Uri.parse(uriString) : null,

@@ -8,3 +8,6 @@
 .dart_tool/
 build/
 pubspec.lock
+
+# References
+vertex_ai_reference/

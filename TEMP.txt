@@ -1,0 +1,19 @@
+Please replace the following lines in `pkgs\google_generative_ai\lib\src\content.dart`:
+
+```dart
+    {'functionResponse': {'name': String _, 'response': Map<String, Object?> _}} =>
+      throw UnimplementedError('FunctionResponse part not yet supported'),
+    {'inlineData': {'mimeType': String _, 'data': String _}} =>
+      throw UnimplementedError('inlineData content part not yet supported'),
+```
+
+with these lines:
+
+```dart
+    {'functionResponse': {'name': final String name, 'response': final Map<String, Object?> response}} =>
+      FunctionResponse(name, response),
+    {'inlineData': {'mimeType': final String mimeType, 'data': final String data}} =>
+      InlineDataPart(mimeType, base64Decode(data)),
+    {'file_data': {'mime_type': final String mimeType, 'file_uri': final String fileUri}} =>
+      FileData(mimeType, fileUri),
+```

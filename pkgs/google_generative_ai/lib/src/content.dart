@@ -34,31 +34,30 @@ final class Content {
 
   static Content text(String text) => Content('user', [TextPart(text)]);
   static Content data(String mimeType, Uint8List bytes) =>
-      Content('user', [DataPart(mimeType, bytes)]);
+      Content('user', [InlineDataPart(mimeType, bytes)]);
   static Content multi(Iterable<Part> parts) => Content('user', [...parts]);
   static Content model(Iterable<Part> parts) => Content('model', [...parts]);
   static Content functionResponse(
-          String name, Map<String, Object?>? response) =>
-      Content('function', [FunctionResponse(name, response)]);
+    String name,
+    Map<String, Object?>? response,
+  ) => Content('function', [FunctionResponse(name, response)]);
   static Content functionResponses(Iterable<FunctionResponse> responses) =>
       Content('function', responses.toList());
   static Content system(String instructions) =>
       Content('system', [TextPart(instructions)]);
 
   Map<String, Object?> toJson() => {
-        if (role case final role?) 'role': role,
-        'parts': parts.map((p) => p.toJson()).toList()
-      };
+    if (role case final role?) 'role': role,
+    'parts': parts.map((p) => p.toJson()).toList(),
+  };
 }
 
 Content parseContent(Object jsonObject) {
   return switch (jsonObject) {
-    {'parts': final List<Object?> parts} => Content(
-        switch (jsonObject) {
-          {'role': final String role} => role,
-          _ => null,
-        },
-        parts.map(_parsePart).toList()),
+    {'parts': final List<Object?> parts} => Content(switch (jsonObject) {
+      {'role': final String role} => role,
+      _ => null,
+    }, parts.map(_parsePart).toList()),
     _ => throw unhandledFormat('Content', jsonObject),
   };
 }
@@ -69,28 +68,43 @@ Part _parsePart(Object? jsonObject) {
     {
       'functionCall': {
         'name': final String name,
-        'args': final Map<String, Object?> args
-      }
+        'args': final Map<String, Object?> args,
+      },
     } =>
       FunctionCall(name, args),
     {
-      'functionResponse': {'name': String _, 'response': Map<String, Object?> _}
+      'functionResponse': {
+        'name': final String name,
+        'response': final Map<String, Object?> response,
+      },
     } =>
-      throw UnimplementedError('FunctionResponse part not yet supported'),
-    {'inlineData': {'mimeType': String _, 'data': String _}} =>
-      throw UnimplementedError('inlineData content part not yet supported'),
+      FunctionResponse(name, response),
+    {
+      'inlineData': {
+        'mimeType': final String mimeType,
+        'data': final String data,
+      },
+    } =>
+      InlineDataPart(mimeType, base64Decode(data)),
+    {
+      'file_data': {
+        'mime_type': final String mimeType,
+        'file_uri': final String fileUri,
+      },
+    } =>
+      FileData(mimeType, fileUri),
     {
       'executableCode': {
         'language': final String language,
         'code': final String code,
-      }
+      },
     } =>
       ExecutableCode(Language._parse(language), code),
     {
       'codeExecutionResult': {
         'outcome': final String outcome,
         'output': final String output,
-      }
+      },
     } =>
       CodeExecutionResult(Outcome._parse(outcome), output),
     _ => throw unhandledFormat('Part', jsonObject),
@@ -110,26 +124,27 @@ final class TextPart implements Part {
 }
 
 /// A [Part] with the byte content of a file.
-final class DataPart implements Part {
+final class InlineDataPart implements Part {
   final String mimeType;
   final Uint8List bytes;
-  DataPart(this.mimeType, this.bytes);
+  InlineDataPart(this.mimeType, this.bytes);
   @override
   Object toJson() => {
-        'inlineData': {'data': base64Encode(bytes), 'mimeType': mimeType}
-      };
+    'inlineData': {'data': base64Encode(bytes), 'mimeType': mimeType},
+  };
 }
 
 /// A [Part] referring to an uploaded file.
 ///
 /// The [uri] should refer to a file uploaded to the Google AI File Service API.
-final class FilePart implements Part {
-  final Uri uri;
-  FilePart(this.uri);
+final class FileData implements Part {
+  final String mimeType;
+  final String fileUri;
+  FileData(this.mimeType, this.fileUri);
   @override
   Object toJson() => {
-        'file_data': {'file_uri': '$uri'}
-      };
+    'file_data': {'file_uri': fileUri, 'mime_type': mimeType},
+  };
 }
 
 /// A predicted `FunctionCall` returned from the model that contains
@@ -147,8 +162,8 @@ final class FunctionCall implements Part {
   @override
   // TODO: Do we need the wrapper object?
   Object toJson() => {
-        'functionCall': {'name': name, 'args': args}
-      };
+    'functionCall': {'name': name, 'args': args},
+  };
 }
 
 final class FunctionResponse implements Part {
@@ -165,8 +180,8 @@ final class FunctionResponse implements Part {
 
   @override
   Object toJson() => {
-        'functionResponse': {'name': name, 'response': response}
-      };
+    'functionResponse': {'name': name, 'response': response},
+  };
 }
 
 /// The code that was executed by the model to generate a response.
@@ -181,11 +196,8 @@ final class ExecutableCode implements Part {
   ExecutableCode(this.language, this.code);
   @override
   Object toJson() => {
-        'executable_code': {
-          'langage': language.toJson(),
-          'code': code,
-        }
-      };
+    'executable_code': {'langage': language.toJson(), 'code': code},
+  };
 }
 
 /// The output from running an [ExecutableCode] to generate a response.
@@ -200,11 +212,8 @@ final class CodeExecutionResult implements Part {
 
   @override
   Object toJson() => {
-        'code_execution_result': {
-          'outcome': outcome.toJson(),
-          'output': output,
-        }
-      };
+    'code_execution_result': {'outcome': outcome.toJson(), 'output': output},
+  };
 }
 
 /// A programming language used in an [ExecutableCode].
@@ -213,15 +222,15 @@ enum Language {
   python;
 
   static Language _parse(Object jsonObject) => switch (jsonObject) {
-        'LANGUAGE_UNSPECIFIED' => unspecified,
-        'PYTHON' => python,
-        _ => throw unhandledFormat('Language', jsonObject),
-      };
+    'LANGUAGE_UNSPECIFIED' => unspecified,
+    'PYTHON' => python,
+    _ => throw unhandledFormat('Language', jsonObject),
+  };
 
   String toJson() => switch (this) {
-        unspecified => 'LANGUAGE_UNSPECIFIED',
-        python => 'PYTHON',
-      };
+    unspecified => 'LANGUAGE_UNSPECIFIED',
+    python => 'PYTHON',
+  };
 }
 
 /// The type of result from running an [ExecutableCode].
@@ -232,17 +241,17 @@ enum Outcome {
   deadlineExceeded;
 
   static Outcome _parse(Object jsonObject) => switch (jsonObject) {
-        'OUTCOME_UNSPECIFIED' => unspecified,
-        'OUTCOME_OK' => ok,
-        'OUTCOME_FAILED' => failed,
-        'OUTCOME_DEADLINE_EXCEEDED' => deadlineExceeded,
-        _ => throw unhandledFormat('Language', jsonObject),
-      };
+    'OUTCOME_UNSPECIFIED' => unspecified,
+    'OUTCOME_OK' => ok,
+    'OUTCOME_FAILED' => failed,
+    'OUTCOME_DEADLINE_EXCEEDED' => deadlineExceeded,
+    _ => throw unhandledFormat('Language', jsonObject),
+  };
 
   String toJson() => switch (this) {
-        unspecified => 'OUTCOME_UNSPECIFIED',
-        ok => 'OUTCOME_OK',
-        failed => 'OUTCOME_FAILED',
-        deadlineExceeded => 'OUTCOME_DEADLINE_EXCEEDED',
-      };
+    unspecified => 'OUTCOME_UNSPECIFIED',
+    ok => 'OUTCOME_OK',
+    failed => 'OUTCOME_FAILED',
+    deadlineExceeded => 'OUTCOME_DEADLINE_EXCEEDED',
+  };
 }

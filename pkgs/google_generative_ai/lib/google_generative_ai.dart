@@ -46,7 +46,7 @@ export 'src/api.dart'
         BlockReason,
         Candidate,
         CitationMetadata,
-        CitationSource,
+        Citation,
         ContentEmbedding,
         CountTokensResponse,
         EmbedContentRequest,
@@ -57,19 +57,23 @@ export 'src/api.dart'
         HarmBlockThreshold,
         HarmCategory,
         HarmProbability,
+        HarmBlockMethod,
+        ResponseModalities,
         PromptFeedback,
         SafetyRating,
         SafetySetting,
         TaskType,
-        UsageMetadata;
+        UsageMetadata,
+        ModalityTokenCount,
+        ContentModality;
 export 'src/chat.dart' show ChatSession, StartChatExtension;
 export 'src/content.dart'
     show
         CodeExecutionResult,
         Content,
-        DataPart,
+        InlineDataPart,
         ExecutableCode,
-        FilePart,
+        FileData,
         FunctionCall,
         FunctionResponse,
         Language,

@@ -168,6 +168,7 @@ final class GenerativeModel {
     GenerationConfig? generationConfig,
     List<Tool>? tools,
     ToolConfig? toolConfig,
+    List<ResponseModalities>? responseModalities,
   }) =>
       makeRequest(
           Task.generateContent,
@@ -177,6 +178,7 @@ final class GenerativeModel {
             generationConfig: generationConfig,
             tools: tools,
             toolConfig: toolConfig,
+            responseModalities: responseModalities,
           ),
           parseGenerateContentResponse);
 
@@ -203,6 +205,7 @@ final class GenerativeModel {
     GenerationConfig? generationConfig,
     List<Tool>? tools,
     ToolConfig? toolConfig,
+    List<ResponseModalities>? responseModalities,
   }) {
     final response = _client.streamRequest(
         _taskUri(Task.streamGenerateContent),
@@ -212,6 +215,7 @@ final class GenerativeModel {
           generationConfig: generationConfig,
           tools: tools,
           toolConfig: toolConfig,
+          responseModalities: responseModalities,
         ));
     return response.map(parseGenerateContentResponse);
   }
@@ -318,6 +322,7 @@ final class GenerativeModel {
     GenerationConfig? generationConfig,
     List<Tool>? tools,
     ToolConfig? toolConfig,
+    List<ResponseModalities>? responseModalities,
   }) {
     safetySettings ??= _safetySettings;
     generationConfig ??= _generationConfig;
@@ -334,6 +339,8 @@ final class GenerativeModel {
       if (toolConfig != null) 'toolConfig': toolConfig.toJson(),
       if (_systemInstruction case final systemInstruction?)
         'systemInstruction': systemInstruction.toJson(),
+      if (responseModalities case final responseModalities?)
+        'responseModalities': responseModalities.map((e) => e.toJson()).toList(),
     };
   }
 }
