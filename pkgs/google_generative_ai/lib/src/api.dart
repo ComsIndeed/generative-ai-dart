@@ -14,8 +14,37 @@
 
 import 'content.dart';
 import 'error.dart';
-import 'function_calling.dart' show Schema;
-import 'model.dart';
+import 'function_calling.dart';
+
+
+enum TaskType {
+  /// Unset value, which will default to one of the other enum values.
+  unspecified,
+
+  /// Specifies the given text is a query in a search/retrieval setting.
+  retrievalQuery,
+
+  /// Specifies the given text is a document from the corpus being searched.
+  retrievalDocument,
+
+  /// Specifies that the given text will be used for STS.
+  semanticSimilarity,
+
+  /// Specifies that the given text will be classified.
+  classification,
+
+  /// Specifies that the embeddings will be used for clustering.
+  clustering;
+
+  String toJson() => switch (this) {
+    unspecified => 'TASK_TYPE_UNSPECIFIED',
+    retrievalQuery => 'RETRIEVAL_QUERY',
+    retrievalDocument => 'RETRIEVAL_DOCUMENT',
+    semanticSimilarity => 'SEMANTIC_SIMILARITY',
+    classification => 'CLASSIFICATION',
+    clustering => 'CLUSTERING',
+  };
+}
 
 final class CountTokensResponse {
   /// The number of tokens that the `model` tokenizes the `prompt` into.
@@ -26,8 +55,16 @@ final class CountTokensResponse {
   /// Optional extra fields in the Vertex AI data model.
   final Map<String, Object?>? _extraFields;
 
-  CountTokensResponse(this.totalTokens, {this.promptTokensDetails}) : _extraFields = null;
-  CountTokensResponse._(this.totalTokens, this._extraFields, {this.promptTokensDetails});
+  /// Token counts for each modality in the prompt.
+  final List<ModalityTokenCount>? promptTokensDetails;
+
+  CountTokensResponse(this.totalTokens, {this.promptTokensDetails})
+    : _extraFields = null;
+  CountTokensResponse._(
+    this.totalTokens,
+    this._extraFields, {
+    this.promptTokensDetails,
+  });
 }
 
 /// Returns the fields other than `totalTokens` that were parsed from JSON for
@@ -38,8 +75,9 @@ Map<String, Object?>? countTokensResponseFields(CountTokensResponse response) =>
 /// Returns a [CountTokensResponse] as if it was parsed from a JSON map with
 /// [extraFields] alongside the total tokends field.
 CountTokensResponse createCountTokensResponse(
-        int totalTokens, Map<String, Object>? extraFields) =>
-    CountTokensResponse._(totalTokens, extraFields);
+  int totalTokens,
+  Map<String, Object>? extraFields,
+) => CountTokensResponse._(totalTokens, extraFields);
 
 /// Response from the model; supports multiple candidates.
 final class GenerateContentResponse {
@@ -74,19 +112,18 @@ final class GenerateContentResponse {
   /// [Candidate.text] to get the text content of candidates other than the
   /// first.
   String? get text => switch (candidates) {
-        [] => switch (promptFeedback) {
-            PromptFeedback(
-              :final blockReason,
-              :final blockReasonMessage,
-            ) =>
-              // TODO: Add a specific subtype for this exception?
-              throw GenerativeAIException('Response was blocked'
-                  '${blockReason != null ? ' due to $blockReason' : ''}'
-                  '${blockReasonMessage != null ? ': $blockReasonMessage' : ''}'),
-            _ => null,
-          },
-        [final candidate, ...] => candidate.text,
-      };
+    [] => switch (promptFeedback) {
+      PromptFeedback(:final blockReason, :final blockReasonMessage) =>
+        // TODO: Add a specific subtype for this exception?
+        throw GenerativeAIException(
+          'Response was blocked'
+          '${blockReason != null ? ' due to $blockReason' : ''}'
+          '${blockReasonMessage != null ? ': $blockReasonMessage' : ''}',
+        ),
+      _ => null,
+    },
+    [final candidate, ...] => candidate.text,
+  };
 
   /// The function call parts of the first candidate in [candidates], if any.
   ///
@@ -120,17 +157,22 @@ final class EmbedContentRequest {
   final String? model;
   final int? outputDimensionality;
 
-  EmbedContentRequest(this.content,
-      {this.taskType, this.title, this.model, this.outputDimensionality});
+  EmbedContentRequest(
+    this.content, {
+    this.taskType,
+    this.title,
+    this.model,
+    this.outputDimensionality,
+  });
 
   Object toJson({String? defaultModel}) => {
-        'content': content.toJson(),
-        if (taskType case final taskType?) 'taskType': taskType.toJson(),
-        if (title != null) 'title': title,
-        if (model ?? defaultModel case final model?) 'model': model,
-        if (outputDimensionality != null)
-          'outputDimensionality': outputDimensionality,
-      };
+    'content': content.toJson(),
+    if (taskType case final taskType?) 'taskType': taskType.toJson(),
+    if (title != null) 'title': title,
+    if (model ?? defaultModel case final model?) 'model': model,
+    if (outputDimensionality != null)
+      'outputDimensionality': outputDimensionality,
+  };
 }
 
 /// An embedding, as defined by a list of values.
@@ -215,14 +257,24 @@ enum ContentModality {
   /// Document content modality.
   document;
 
+  static ContentModality _parseValue(Object jsonObject) => switch (jsonObject) {
+    'MODALITY_UNSPECIFIED' => unspecified,
+    'TEXT' => text,
+    'IMAGE' => image,
+    'VIDEO' => video,
+    'AUDIO' => audio,
+    'DOCUMENT' => document,
+    _ => throw unhandledFormat('ContentModality', jsonObject),
+  };
+
   String toJson() => switch (this) {
-        unspecified => 'MODALITY_UNSPECIFIED',
-        text => 'TEXT',
-        image => 'IMAGE',
-        video => 'VIDEO',
-        audio => 'AUDIO',
-        document => 'DOCUMENT',
-      };
+    unspecified => 'MODALITY_UNSPECIFIED',
+    text => 'TEXT',
+    image => 'IMAGE',
+    video => 'VIDEO',
+    audio => 'AUDIO',
+    document => 'DOCUMENT',
+  };
 }
 
 /// The desired modalities of the model's response.
@@ -240,11 +292,11 @@ enum ResponseModalities {
   audio;
 
   String toJson() => switch (this) {
-        unspecified => 'RESPONSE_MODALITY_UNSPECIFIED',
-        text => 'TEXT',
-        image => 'IMAGE',
-        audio => 'AUDIO',
-      };
+    unspecified => 'RESPONSE_MODALITY_UNSPECIFIED',
+    text => 'TEXT',
+    image => 'IMAGE',
+    audio => 'AUDIO',
+  };
 }
 
 /// Response candidate generated from a [GenerativeModel].
@@ -272,8 +324,13 @@ final class Candidate {
   final String? finishMessage;
 
   // TODO: token count?
-  Candidate(this.content, this.safetyRatings, this.citationMetadata,
-      this.finishReason, this.finishMessage);
+  Candidate(
+    this.content,
+    this.safetyRatings,
+    this.citationMetadata,
+    this.finishReason,
+    this.finishMessage,
+  );
 
   /// The concatenation of the text parts of [content], if any.
   ///
@@ -294,7 +351,8 @@ final class Candidate {
         suffix = '';
       }
       throw GenerativeAIException(
-          'Candidate was blocked due to $finishReason$suffix');
+        'Candidate was blocked due to $finishReason$suffix',
+      );
     }
     return switch (content.parts) {
       // Special case for a single TextPart to avoid iterable chain.
@@ -313,7 +371,7 @@ final class Candidate {
 /// safety across a number of harm categories and the probability of the harm
 /// classification is included here.
 final class SafetyRating {
-  /// The category for this rating.
+  /// The category for this setting.
   final HarmCategory category;
 
   /// The probability of harm for this content.
@@ -339,11 +397,11 @@ enum BlockReason {
   other;
 
   static BlockReason _parseValue(String jsonObject) => switch (jsonObject) {
-        'BLOCK_REASON_UNSPECIFIED' => BlockReason.unspecified,
-        'SAFETY' => BlockReason.safety,
-        'OTHER' => BlockReason.other,
-        _ => throw unhandledFormat('BlockReason', jsonObject),
-      };
+    'BLOCK_REASON_UNSPECIFIED' => BlockReason.unspecified,
+    'SAFETY' => BlockReason.safety,
+    'OTHER' => BlockReason.other,
+    _ => throw unhandledFormat('BlockReason', jsonObject),
+  };
 
   @override
   String toString() => name;
@@ -374,21 +432,21 @@ enum HarmCategory {
   dangerousContent;
 
   static HarmCategory _parseValue(Object jsonObject) => switch (jsonObject) {
-        'HARM_CATEGORY_UNSPECIFIED' => unspecified,
-        'HARM_CATEGORY_HARASSMENT' => harassment,
-        'HARM_CATEGORY_HATE_SPEECH' => hateSpeech,
-        'HARM_CATEGORY_SEXUALLY_EXPLICIT' => sexuallyExplicit,
-        'HARM_CATEGORY_DANGEROUS_CONTENT' => dangerousContent,
-        _ => throw unhandledFormat('HarmCategory', jsonObject),
-      };
+    'HARM_CATEGORY_UNSPECIFIED' => unspecified,
+    'HARM_CATEGORY_HARASSMENT' => harassment,
+    'HARM_CATEGORY_HATE_SPEECH' => hateSpeech,
+    'HARM_CATEGORY_SEXUALLY_EXPLICIT' => sexuallyExplicit,
+    'HARM_CATEGORY_DANGEROUS_CONTENT' => dangerousContent,
+    _ => throw unhandledFormat('HarmCategory', jsonObject),
+  };
 
   String toJson() => switch (this) {
-        unspecified => 'HARM_CATEGORY_UNSPECIFIED',
-        harassment => 'HARM_CATEGORY_HARASSMENT',
-        hateSpeech => 'HARM_CATEGORY_HATE_SPEECH',
-        sexuallyExplicit => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-        dangerousContent => 'HARM_CATEGORY_DANGEROUS_CONTENT'
-      };
+    unspecified => 'HARM_CATEGORY_UNSPECIFIED',
+    harassment => 'HARM_CATEGORY_HARASSMENT',
+    hateSpeech => 'HARM_CATEGORY_HATE_SPEECH',
+    sexuallyExplicit => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+    dangerousContent => 'HARM_CATEGORY_DANGEROUS_CONTENT',
+  };
 }
 
 /// The probability that a piece of content is harmful.
@@ -412,13 +470,13 @@ enum HarmProbability {
   high;
 
   static HarmProbability _parseValue(Object jsonObject) => switch (jsonObject) {
-        'UNSPECIFIED' => HarmProbability.unspecified,
-        'NEGLIGIBLE' => HarmProbability.negligible,
-        'LOW' => HarmProbability.low,
-        'MEDIUM' => HarmProbability.medium,
-        'HIGH' => HarmProbability.high,
-        _ => throw unhandledFormat('HarmProbability', jsonObject),
-      };
+    'UNSPECIFIED' => HarmProbability.unspecified,
+    'NEGLIGIBLE' => HarmProbability.negligible,
+    'LOW' => HarmProbability.low,
+    'MEDIUM' => HarmProbability.medium,
+    'HIGH' => HarmProbability.high,
+    _ => throw unhandledFormat('HarmProbability', jsonObject),
+  };
 }
 
 /// Source attributions for a piece of content.
@@ -473,14 +531,14 @@ enum FinishReason {
   other;
 
   static FinishReason _parseValue(Object jsonObject) => switch (jsonObject) {
-        'UNSPECIFIED' => FinishReason.unspecified,
-        'STOP' => FinishReason.stop,
-        'MAX_TOKENS' => FinishReason.maxTokens,
-        'SAFETY' => FinishReason.safety,
-        'RECITATION' => FinishReason.recitation,
-        'OTHER' => FinishReason.other,
-        _ => throw unhandledFormat('FinishReason', jsonObject),
-      };
+    'UNSPECIFIED' => FinishReason.unspecified,
+    'STOP' => FinishReason.stop,
+    'MAX_TOKENS' => FinishReason.maxTokens,
+    'SAFETY' => FinishReason.safety,
+    'RECITATION' => FinishReason.recitation,
+    'OTHER' => FinishReason.other,
+    _ => throw unhandledFormat('FinishReason', jsonObject),
+  };
 
   @override
   String toString() => name;
@@ -503,10 +561,10 @@ final class SafetySetting {
   SafetySetting(this.category, this.threshold, [this.method]);
 
   Object toJson() => {
-        'category': category.toJson(),
-        'threshold': threshold.toJson(),
-        if (method case final method?) 'method': method.toJson(),
-      };
+    'category': category.toJson(),
+    'threshold': threshold.toJson(),
+    if (method case final method?) 'method': method.toJson(),
+  };
 }
 
 /// Probability of harm which causes content to be blocked.
@@ -530,12 +588,12 @@ enum HarmBlockThreshold {
   none;
 
   String toJson() => switch (this) {
-        unspecified => 'HARM_BLOCK_THRESHOLD_UNSPECIFIED',
-        low => 'BLOCK_LOW_AND_ABOVE',
-        medium => 'BLOCK_MEDIUM_AND_ABOVE',
-        high => 'BLOCK_ONLY_HIGH',
-        none => 'BLOCK_NONE'
-      };
+    unspecified => 'HARM_BLOCK_THRESHOLD_UNSPECIFIED',
+    low => 'BLOCK_LOW_AND_ABOVE',
+    medium => 'BLOCK_MEDIUM_AND_ABOVE',
+    high => 'BLOCK_ONLY_HIGH',
+    none => 'BLOCK_NONE',
+  };
 }
 
 /// Method for blocking unsafe content.
@@ -550,10 +608,10 @@ enum HarmBlockMethod {
   severity;
 
   String toJson() => switch (this) {
-        unspecified => 'HARM_BLOCK_METHOD_UNSPECIFIED',
-        probability => 'PROBABILITY',
-        severity => 'SEVERITY',
-      };
+    unspecified => 'HARM_BLOCK_METHOD_UNSPECIFIED',
+    probability => 'PROBABILITY',
+    severity => 'SEVERITY',
+  };
 }
 
 /// Configuration options for model generation and outputs.
@@ -644,55 +702,25 @@ final class GenerationConfig {
   });
 
   Map<String, Object?> toJson() => {
-        if (candidateCount case final candidateCount?)
-          'candidateCount': candidateCount,
-        if (stopSequences.isNotEmpty) 'stopSequences': stopSequences,
-        if (maxOutputTokens case final maxOutputTokens?)
-          'maxOutputTokens': maxOutputTokens,
-        if (temperature case final temperature?) 'temperature': temperature,
-        if (topP case final topP?) 'topP': topP,
-        if (topK case final topK?) 'topK': topK,
-        if (presencePenalty case final presencePenalty?)
-          'presencePenalty': presencePenalty,
-        if (frequencyPenalty case final frequencyPenalty?)
-          'frequencyPenalty': frequencyPenalty,
-        if (responseMimeType case final responseMimeType?)
-          'responseMimeType': responseMimeType,
-        if (responseSchema case final responseSchema?)
-          'responseSchema': responseSchema,
-        if (responseModalities case final responseModalities?)
-          'responseModalities':
-              responseModalities.map((e) => e.toJson()).toList(),
-      };
-
-/// Type of task for which the embedding will be used.
-enum TaskType {
-  /// Unset value, which will default to one of the other enum values.
-  unspecified,
-
-  /// Specifies the given text is a query in a search/retrieval setting.
-  retrievalQuery,
-
-  /// Specifies the given text is a document from the corpus being searched.
-  retrievalDocument,
-
-  /// Specifies the given text will be used for STS.
-  semanticSimilarity,
-
-  /// Specifies that the given text will be classified.
-  classification,
-
-  /// Specifies that the embeddings will be used for clustering.
-  clustering;
-
-  String toJson() => switch (this) {
-        unspecified => 'TASK_TYPE_UNSPECIFIED',
-        retrievalQuery => 'RETRIEVAL_QUERY',
-        retrievalDocument => 'RETRIEVAL_DOCUMENT',
-        semanticSimilarity => 'SEMANTIC_SIMILARITY',
-        classification => 'CLASSIFICATION',
-        clustering => 'CLUSTERING'
-      };
+    if (candidateCount case final candidateCount?)
+      'candidateCount': candidateCount,
+    if (stopSequences.isNotEmpty) 'stopSequences': stopSequences,
+    if (maxOutputTokens case final maxOutputTokens?)
+      'maxOutputTokens': maxOutputTokens,
+    if (temperature case final temperature?) 'temperature': temperature,
+    if (topP case final topP?) 'topP': topP,
+    if (topK case final topK?) 'topK': topK,
+    if (presencePenalty case final presencePenalty?)
+      'presencePenalty': presencePenalty,
+    if (frequencyPenalty case final frequencyPenalty?)
+      'frequencyPenalty': frequencyPenalty,
+    if (responseMimeType case final responseMimeType?)
+      'responseMimeType': responseMimeType,
+    if (responseSchema case final responseSchema?)
+      'responseSchema': responseSchema,
+    if (responseModalities case final responseModalities?)
+      'responseModalities': responseModalities.map((e) => e.toJson()).toList(),
+  };
 }
 
 GenerateContentResponse parseGenerateContentResponse(Object jsonObject) {
@@ -700,20 +728,25 @@ GenerateContentResponse parseGenerateContentResponse(Object jsonObject) {
   final candidates = switch (jsonObject) {
     {'candidates': final List<Object?> candidates} =>
       candidates.map(_parseCandidate).toList(),
-    _ => <Candidate>[]
+    _ => <Candidate>[],
   };
   final promptFeedback = switch (jsonObject) {
-    {'promptFeedback': final promptFeedback?} =>
-      _parsePromptFeedback(promptFeedback),
+    {'promptFeedback': final promptFeedback?} => _parsePromptFeedback(
+      promptFeedback,
+    ),
     _ => null,
   };
   final usageMedata = switch (jsonObject) {
-    {'usageMetadata': final usageMetadata?} =>
-      _parseUsageMetadata(usageMetadata),
+    {'usageMetadata': final usageMetadata?} => _parseUsageMetadata(
+      usageMetadata,
+    ),
     _ => null,
   };
-  return GenerateContentResponse(candidates, promptFeedback,
-      usageMetadata: usageMedata);
+  return GenerateContentResponse(
+    candidates,
+    promptFeedback,
+    usageMetadata: usageMedata,
+  );
 }
 
 CountTokensResponse parseCountTokensResponse(Object jsonObject) {
@@ -722,37 +755,44 @@ CountTokensResponse parseCountTokensResponse(Object jsonObject) {
     final extraFields = {
       for (final entry in jsonObject.entries)
         if (entry.key case final String fieldName
-            when fieldName != 'totalTokens' && fieldName != 'promptTokensDetails')
-          fieldName: entry.value
+            when fieldName != 'totalTokens' &&
+                fieldName != 'promptTokensDetails')
+          fieldName: entry.value,
     };
     final promptTokensDetails = switch (jsonObject) {
       {'promptTokensDetails': final List<Object?> details} =>
         details.map(_parseModalityTokenCount).toList(),
       _ => null,
     };
-    return CountTokensResponse._(totalTokens,
-        extraFields.isEmpty ? null : Map.unmodifiable(extraFields),
-        promptTokensDetails: promptTokensDetails);
+    return CountTokensResponse._(
+      totalTokens,
+      extraFields.isEmpty ? null : Map.unmodifiable(extraFields),
+      promptTokensDetails: promptTokensDetails,
+    );
   }
   throw unhandledFormat('CountTokensResponse', jsonObject);
 }
 
 EmbedContentResponse parseEmbedContentResponse(Object jsonObject) {
   return switch (jsonObject) {
-    {'embedding': final Object embedding} =>
-      EmbedContentResponse(_parseContentEmbedding(embedding)),
+    {'embedding': final Object embedding} => EmbedContentResponse(
+      _parseContentEmbedding(embedding),
+    ),
     {'error': final Object error} => throw parseError(error),
-    _ => throw unhandledFormat('EmbedContentResponse', jsonObject)
+    _ => throw unhandledFormat('EmbedContentResponse', jsonObject),
   };
 }
 
-BatchEmbedContentsResponse parseBatchEmbedContentsResponse(Object jsonObject) {
+BatchEmbedContentsResponse parseBatchEmbedContentsResponse(
+  Object jsonObject,
+) {
   return switch (jsonObject) {
     {'embeddings': final List<Object?> embeddings} =>
       BatchEmbedContentsResponse(
-          embeddings.map(_parseContentEmbedding).toList()),
+        embeddings.map(_parseContentEmbedding).toList(),
+      ),
     {'error': final Object error} => throw parseError(error),
-    _ => throw unhandledFormat('EmbedContentResponse', jsonObject)
+    _ => throw unhandledFormat('EmbedContentResponse', jsonObject),
   };
 }
 
@@ -768,42 +808,42 @@ Candidate _parseCandidate(Object? jsonObject) {
     switch (jsonObject) {
       {'safetyRatings': final List<Object?> safetyRatings} =>
         safetyRatings.map(_parseSafetyRating).toList(),
-      _ => null
+      _ => null,
     },
     switch (jsonObject) {
       {'citationMetadata': final Object citationMetadata} =>
         _parseCitationMetadata(citationMetadata),
-      _ => null
+      _ => null,
     },
     switch (jsonObject) {
-      {'finishReason': final Object finishReason} =>
-        FinishReason._parseValue(finishReason),
-      _ => null
+      {'finishReason': final Object finishReason} => FinishReason._parseValue(
+        finishReason,
+      ),
+      _ => null,
     },
     switch (jsonObject) {
       {'finishMessage': final String finishMessage} => finishMessage,
-      _ => null
+      _ => null,
     },
   );
 }
 
 PromptFeedback _parsePromptFeedback(Object jsonObject) {
   return switch (jsonObject) {
-    {
-      'safetyRatings': final List<Object?> safetyRatings,
-    } =>
-      PromptFeedback(
-          switch (jsonObject) {
-            {'blockReason': final String blockReason} =>
-              BlockReason._parseValue(blockReason),
-            _ => null,
-          },
-          switch (jsonObject) {
-            {'blockReasonMessage': final String blockReasonMessage} =>
-              blockReasonMessage,
-            _ => null,
-          },
-          safetyRatings.map(_parseSafetyRating).toList()),
+    {'safetyRatings': final List<Object?> safetyRatings} => PromptFeedback(
+      switch (jsonObject) {
+        {'blockReason': final String blockReason} => BlockReason._parseValue(
+          blockReason,
+        ),
+        _ => null,
+      },
+      switch (jsonObject) {
+        {'blockReasonMessage': final String blockReasonMessage} =>
+          blockReasonMessage,
+        _ => null,
+      },
+      safetyRatings.map(_parseSafetyRating).toList(),
+    ),
     _ => throw unhandledFormat('PromptFeedback', jsonObject),
   };
 }
@@ -836,19 +876,22 @@ UsageMetadata _parseUsageMetadata(Object jsonObject) {
     _ => null,
   };
   return UsageMetadata(
-      promptTokenCount: promptTokenCount,
-      candidatesTokenCount: candidatesTokenCount,
-      totalTokenCount: totalTokenCount,
-      promptTokensDetails: promptTokensDetails,
-      candidatesTokensDetails: candidatesTokensDetails);
+    promptTokenCount: promptTokenCount,
+    candidatesTokenCount: candidatesTokenCount,
+    totalTokenCount: totalTokenCount,
+    promptTokensDetails: promptTokensDetails,
+    candidatesTokensDetails: candidatesTokensDetails,
+  );
 }
 
 ModalityTokenCount _parseModalityTokenCount(Object? jsonObject) {
   return switch (jsonObject) {
     {'modality': final String modality, 'tokenCount': final int tokenCount} =>
       ModalityTokenCount(ContentModality._parseValue(modality), tokenCount),
-    {'modality': final String modality} =>
-      ModalityTokenCount(ContentModality._parseValue(modality), 0),
+    {'modality': final String modality} => ModalityTokenCount(
+      ContentModality._parseValue(modality),
+      0,
+    ),
     _ => throw unhandledFormat('ModalityTokenCount', jsonObject),
   };
 }
@@ -857,10 +900,12 @@ SafetyRating _parseSafetyRating(Object? jsonObject) {
   return switch (jsonObject) {
     {
       'category': final Object category,
-      'probability': final Object probability
+      'probability': final Object probability,
     } =>
-      SafetyRating(HarmCategory._parseValue(category),
-          HarmProbability._parseValue(probability)),
+      SafetyRating(
+        HarmCategory._parseValue(category),
+        HarmProbability._parseValue(probability),
+      ),
     _ => throw unhandledFormat('SafetyRating', jsonObject),
   };
 }
@@ -868,8 +913,8 @@ SafetyRating _parseSafetyRating(Object? jsonObject) {
 ContentEmbedding _parseContentEmbedding(Object? jsonObject) {
   return switch (jsonObject) {
     {'values': final List<Object?> values} => ContentEmbedding(<double>[
-        ...values.cast<double>(),
-      ]),
+      ...values.cast<double>(),
+    ]),
     _ => throw unhandledFormat('ContentEmbedding', jsonObject),
   };
 }
@@ -879,8 +924,9 @@ CitationMetadata _parseCitationMetadata(Object? jsonObject) {
     {'citationSources': final List<Object?> citationSources} =>
       CitationMetadata(citationSources.map(_parseCitation).toList()),
     // Vertex SDK format uses `citations`
-    {'citations': final List<Object?> citationSources} =>
-      CitationMetadata(citationSources.map(_parseCitation).toList()),
+    {'citations': final List<Object?> citationSources} => CitationMetadata(
+      citationSources.map(_parseCitation).toList(),
+    ),
     _ => throw unhandledFormat('CitationMetadata', jsonObject),
   };
 }

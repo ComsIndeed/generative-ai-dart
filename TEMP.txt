@@ -1,19 +1,37 @@
-Please replace the following lines in `pkgs\google_generative_ai\lib\src\content.dart`:
+Continuing work on porting features from `firebase_vertexai` to `google_generative_ai`.
+
+I am currently fixing analysis errors after implementing several features. The most persistent error is a duplicate `TaskType` enum in `pkgs/google_generative_ai/lib/src/api.dart`.
+
+Please remove the following duplicate `TaskType` enum from `pkgs\google_generative_ai\lib\src\api.dart`:
 
 ```dart
-    {'functionResponse': {'name': String _, 'response': Map<String, Object?> _}} =>
-      throw UnimplementedError('FunctionResponse part not yet supported'),
-    {'inlineData': {'mimeType': String _, 'data': String _}} =>
-      throw UnimplementedError('inlineData content part not yet supported'),
-```
+/// Type of task for which the embedding will be used.
+enum TaskType {
+  /// Unset value, which will default to one of the other enum values.
+  unspecified,
 
-with these lines:
+  /// Specifies the given text is a query in a search/retrieval setting.
+  retrievalQuery,
 
-```dart
-    {'functionResponse': {'name': final String name, 'response': final Map<String, Object?> response}} =>
-      FunctionResponse(name, response),
-    {'inlineData': {'mimeType': final String mimeType, 'data': final String data}} =>
-      InlineDataPart(mimeType, base64Decode(data)),
-    {'file_data': {'mime_type': final String mimeType, 'file_uri': final String fileUri}} =>
-      FileData(mimeType, fileUri),
+  /// Specifies the given text is a document from the corpus being searched.
+  retrievalDocument,
+
+  /// Specifies that the given text will be used for STS.
+  semanticSimilarity,
+
+  /// Specifies that the given text will be classified.
+  classification,
+
+  /// Specifies that the embeddings will be used for clustering.
+  clustering;
+
+  String toJson() => switch (this) {
+        unspecified => 'TASK_TYPE_UNSPECIFIED',
+        retrievalQuery => 'RETRIEVAL_QUERY',
+        retrievalDocument => 'RETRIEVAL_DOCUMENT',
+        semanticSimilarity => 'SEMANTIC_SIMILARITY',
+        classification => 'CLASSIFICATION',
+        clustering => 'CLUSTERING'
+      };
+}
 ```
