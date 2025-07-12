@@ -2,6 +2,8 @@
 
 This document summarizes the changes made to the `google_generative_ai` package to bring it closer to feature parity with the `firebase_vertexai` package, based on the Gemini API capabilities.
 
+## Changes made on June 7, 2025, at 12:54 AM:
+
 ## Implemented Features:
 
 1.  **Enhanced Content Part Handling:**
@@ -20,7 +22,7 @@ This document summarizes the changes made to the `google_generative_ai` package 
     *   **`pkgs/google_generative_ai/lib/src/api.dart`:**
         *   Added `method` parameter (of type `HarmBlockMethod`) to the `SafetySetting` class, enabling specification of whether safety blocking is based on probability or severity.
         *   Introduced the `HarmBlockMethod` enum with `unspecified`, `probability`, and `severity` values.
-        *   Updated `SafetySetting.toJson()` to include serialization of the `method`.
+        *   Updated `SafetySetting.toJson()` to include serialization of `method`.
 
 4.  **Detailed Token Usage Metrics:**
     *   **`pkgs/google_generative_ai/lib/src/api.dart`:**
@@ -50,3 +52,15 @@ This document summarizes the changes made to the `google_generative_ai` package 
     *   Updated export statements to reflect the renaming of `DataPart` to `InlineDataPart` and `FilePart` to `FileData`.
     *   Added exports for newly introduced enums and classes: `HarmBlockMethod`, `ResponseModalities`, `ModalityTokenCount`, and `ContentModality`.
     *   Updated export for `Citation` instead of `CitationSource`.
+
+## Changes made on June 7, 2025, at 9:23 AM:
+
+1.  **Centralized Response Parsing:**
+    *   Moved `parseGenerateContentResponse`, `parseCountTokensResponse`, `parseEmbedContentResponse`, `parseBatchEmbedContentsResponse`, and all their helper `_parse` functions from `pkgs/google_generative_ai/lib/src/model.dart` to `pkgs/google_generative_ai/lib/src/api.dart`. This centralizes response parsing logic.
+    *   Updated imports in `pkgs/google_generative_ai/lib/src/model.dart` and `pkgs/google_generative_ai/lib/src/api.dart` to reflect the new locations of these functions and types.
+    *   Removed the `show` clause from the `api.dart` import in `model.dart` to allow all symbols from `api.dart` to be imported.
+
+2.  **Test File Corrections:**
+    *   Corrected class names from `DataPart` to `InlineDataPart` and `FilePart` to `FileData` in `pkgs/google_generative_ai/test/utils/matchers.dart`.
+    *   Updated imports in `pkgs/google_generative_ai/test/utils/matchers.dart` to include `package:google_generative_ai/src/content.dart`.
+    *   Changed `CitationSource` to `Citation` in `pkgs/google_generative_ai/test/response_parsing_test.dart` to align with the updated class name.
