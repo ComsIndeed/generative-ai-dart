@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import '../google_generative_ai.dart';
 import 'content.dart';
 
 /// Tool details that the model may use to generate a response.
