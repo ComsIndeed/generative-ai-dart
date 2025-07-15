@@ -98,3 +98,5 @@ export 'src/function_calling.dart'
         Tool,
         ToolConfig;
 export 'src/model.dart' show GenerativeModel, RequestOptions;
+export 'src/function_calling.dart' show GoogleSearch;
+export 'src/api.dart' show GroundingMetadata, GroundingChunk, GroundingSupport, Segment;

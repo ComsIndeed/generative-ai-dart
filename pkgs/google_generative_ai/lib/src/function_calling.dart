@@ -38,13 +38,12 @@ final class Tool {
   Tool({this.functionDeclarations, this.codeExecution, this.googleSearch});
 
   Map<String, Object> toJson() => {
-    if (functionDeclarations case final functionDeclarations?)
-      'functionDeclarations': functionDeclarations
-          .map((f) => f.toJson())
-          .toList(),
-    if (codeExecution != null) 'codeExecution': <String, Object?>{},
-    if (googleSearch != null) 'googleSearch': <String, Object?>{},
-  };
+        if (functionDeclarations case final functionDeclarations?)
+          'functionDeclarations':
+              functionDeclarations.map((f) => f.toJson()).toList(),
+        if (codeExecution != null) 'codeExecution': <String, Object?>{},
+        if (googleSearch != null) 'googleSearch': <String, Object?>{},
+      };
 }
 
 /// Structured representation of a function declaration as defined by the
@@ -68,10 +67,11 @@ final class FunctionDeclaration {
   FunctionDeclaration(this.name, this.description, this.parameters);
 
   Map<String, Object?> toJson() => {
-    'name': name,
-    'description': description,
-    if (parameters case final parameters?) 'parameters': parameters.toJson(),
-  };
+        'name': name,
+        'description': description,
+        if (parameters case final parameters?)
+          'parameters': parameters.toJson(),
+      };
 }
 
 /// An empty configuration marker to enable code execution.
@@ -82,6 +82,12 @@ final class FunctionDeclaration {
 /// [ExecutableCode] and [CodeExecutionResult] parts.
 class CodeExecution {}
 
+/// An empty configuration marker to enable Google Search.
+///
+/// When Google Search is enabled the model may generate search queries and
+/// use the results to generate a response to the prompt. When this happens
+/// the search queries and results will be included in the response as
+/// [GroundingMetadata] parts.
 class GoogleSearch {}
 
 final class ToolConfig {
@@ -89,9 +95,9 @@ final class ToolConfig {
   ToolConfig({this.functionCallingConfig});
 
   Map<String, Object?> toJson() => {
-    if (functionCallingConfig case final config?)
-      'functionCallingConfig': config.toJson(),
-  };
+        if (functionCallingConfig case final config?)
+          'functionCallingConfig': config.toJson(),
+      };
 }
 
 /// Configuration specifying how the model should use the functions provided as
@@ -113,10 +119,10 @@ final class FunctionCallingConfig {
   FunctionCallingConfig({this.mode, this.allowedFunctionNames});
 
   Object toJson() => {
-    if (mode case final mode?) 'mode': mode.toJson(),
-    if (allowedFunctionNames case final allowedFunctionNames?)
-      'allowedFunctionNames': allowedFunctionNames.toList(),
-  };
+        if (mode case final mode?) 'mode': mode.toJson(),
+        if (allowedFunctionNames case final allowedFunctionNames?)
+          'allowedFunctionNames': allowedFunctionNames.toList(),
+      };
 }
 
 enum FunctionCallingMode {
@@ -136,10 +142,10 @@ enum FunctionCallingMode {
   none;
 
   String toJson() => switch (this) {
-    auto => 'AUTO',
-    any => 'ANY',
-    none => 'NONE',
-  };
+        auto => 'AUTO',
+        any => 'ANY',
+        none => 'NONE',
+      };
 }
 
 /// The definition of an input or output data types.
@@ -197,7 +203,7 @@ final class Schema {
 
   /// Construct a schema for a String value.
   Schema.string({String? description, bool? nullable})
-    : this(SchemaType.string, description: description, nullable: nullable);
+      : this(SchemaType.string, description: description, nullable: nullable);
 
   /// Construct a schema for String value with enumerated possible values.
   Schema.enumString({
@@ -205,47 +211,47 @@ final class Schema {
     String? description,
     bool? nullable,
   }) : this(
-         SchemaType.string,
-         enumValues: enumValues,
-         description: description,
-         nullable: nullable,
-         format: 'enum',
-       );
+          SchemaType.string,
+          enumValues: enumValues,
+          description: description,
+          nullable: nullable,
+          format: 'enum',
+        );
 
   /// Construct a schema for a non-integer number.
   ///
   /// The [format] may be "float" or "double".
   Schema.number({String? description, bool? nullable, String? format})
-    : this(
-        SchemaType.number,
-        description: description,
-        nullable: nullable,
-        format: format,
-      );
+      : this(
+          SchemaType.number,
+          description: description,
+          nullable: nullable,
+          format: format,
+        );
 
   /// Construct a schema for an integer number.
   ///
   /// The [format] may be "int32" or "int64".
   Schema.integer({String? description, bool? nullable, String? format})
-    : this(
-        SchemaType.integer,
-        description: description,
-        nullable: nullable,
-        format: format,
-      );
+      : this(
+          SchemaType.integer,
+          description: description,
+          nullable: nullable,
+          format: format,
+        );
 
   /// Construct a schema for bool value.
   Schema.boolean({String? description, bool? nullable})
-    : this(SchemaType.boolean, description: description, nullable: nullable);
+      : this(SchemaType.boolean, description: description, nullable: nullable);
 
   /// Construct a schema for an array of values with a specified type.
   Schema.array({required Schema items, String? description, bool? nullable})
-    : this(
-        SchemaType.array,
-        description: description,
-        nullable: nullable,
-        items: items,
-      );
+      : this(
+          SchemaType.array,
+          description: description,
+          nullable: nullable,
+          items: items,
+        );
 
   /// Construct a schema for an object with one or more properties.
   Schema.object({
@@ -254,28 +260,28 @@ final class Schema {
     String? description,
     bool? nullable,
   }) : this(
-         SchemaType.object,
-         properties: properties,
-         requiredProperties: requiredProperties,
-         description: description,
-         nullable: nullable,
-       );
+          SchemaType.object,
+          properties: properties,
+          requiredProperties: requiredProperties,
+          description: description,
+          nullable: nullable,
+        );
 
   Map<String, Object> toJson() => {
-    'type': type.toJson(),
-    if (format case final format?) 'format': format,
-    if (description case final description?) 'description': description,
-    if (nullable case final nullable?) 'nullable': nullable,
-    if (enumValues case final enumValues?) 'enum': enumValues,
-    if (items case final items?) 'items': items.toJson(),
-    if (properties case final properties?)
-      'properties': {
-        for (final MapEntry(:key, :value) in properties.entries)
-          key: value.toJson(),
-      },
-    if (requiredProperties case final requiredProperties?)
-      'required': requiredProperties,
-  };
+        'type': type.toJson(),
+        if (format case final format?) 'format': format,
+        if (description case final description?) 'description': description,
+        if (nullable case final nullable?) 'nullable': nullable,
+        if (enumValues case final enumValues?) 'enum': enumValues,
+        if (items case final items?) 'items': items.toJson(),
+        if (properties case final properties?)
+          'properties': {
+            for (final MapEntry(:key, :value) in properties.entries)
+              key: value.toJson(),
+          },
+        if (requiredProperties case final requiredProperties?)
+          'required': requiredProperties,
+      };
 }
 
 /// The value type of a [Schema].
@@ -288,11 +294,11 @@ enum SchemaType {
   object;
 
   String toJson() => switch (this) {
-    string => 'STRING',
-    number => 'NUMBER',
-    integer => 'INTEGER',
-    boolean => 'BOOLEAN',
-    array => 'ARRAY',
-    object => 'OBJECT',
-  };
+        string => 'STRING',
+        number => 'NUMBER',
+        integer => 'INTEGER',
+        boolean => 'BOOLEAN',
+        array => 'ARRAY',
+        object => 'OBJECT',
+      };
 }
