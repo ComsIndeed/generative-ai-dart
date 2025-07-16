@@ -16,6 +16,8 @@ import '../google_generative_ai.dart' show GenerativeModel;
 import 'content.dart';
 import 'error.dart';
 import 'function_calling.dart';
+import 'dart:convert';
+
 import 'model.dart' show GenerativeModel;
 
 enum TaskType {
@@ -800,9 +802,7 @@ EmbedContentResponse parseEmbedContentResponse(Object jsonObject) {
   };
 }
 
-BatchEmbedContentsResponse parseBatchEmbedContentsResponse(
-  Object jsonObject,
-) {
+BatchEmbedContentsResponse parseBatchEmbedContentsResponse(Object jsonObject) {
   return switch (jsonObject) {
     {'embeddings': final List<Object?> embeddings} =>
       BatchEmbedContentsResponse(
@@ -819,34 +819,35 @@ Candidate _parseCandidate(Object? jsonObject) {
   }
 
   return Candidate(
-      jsonObject.containsKey('content')
-          ? parseContent(jsonObject['content'] as Object)
-          : Content(null, []),
-      switch (jsonObject) {
-        {'safetyRatings': final List<Object?> safetyRatings} =>
-          safetyRatings.map(_parseSafetyRating).toList(),
-        _ => null,
-      },
-      switch (jsonObject) {
-        {'citationMetadata': final Object citationMetadata} =>
-          _parseCitationMetadata(citationMetadata),
-        _ => null,
-      },
-      switch (jsonObject) {
-        {'finishReason': final Object finishReason} => FinishReason._parseValue(
-            finishReason,
-          ),
-        _ => null,
-      },
-      switch (jsonObject) {
-        {'finishMessage': final String finishMessage} => finishMessage,
-        _ => null,
-      },
-      switch (jsonObject) {
-        {'groundingMetadata': final Object groundingMetadata} =>
-          _parseGroundingMetadata(groundingMetadata),
-        _ => null,
-      });
+    jsonObject.containsKey('content')
+        ? parseContent(jsonObject['content'] as Object)
+        : Content(null, []),
+    switch (jsonObject) {
+      {'safetyRatings': final List<Object?> safetyRatings} =>
+        safetyRatings.map(_parseSafetyRating).toList(),
+      _ => null,
+    },
+    switch (jsonObject) {
+      {'citationMetadata': final Object citationMetadata} =>
+        _parseCitationMetadata(citationMetadata),
+      _ => null,
+    },
+    switch (jsonObject) {
+      {'finishReason': final Object finishReason} => FinishReason._parseValue(
+          finishReason,
+        ),
+      _ => null,
+    },
+    switch (jsonObject) {
+      {'finishMessage': final String finishMessage} => finishMessage,
+      _ => null,
+    },
+    switch (jsonObject) {
+      {'groundingMetadata': final Object groundingMetadata} =>
+        _parseGroundingMetadata(groundingMetadata),
+      _ => null,
+    },
+  );
 }
 
 PromptFeedback _parsePromptFeedback(Object jsonObject) {
@@ -1008,7 +1009,11 @@ GroundingMetadata _parseGroundingMetadata(Object? jsonObject) {
           throw unhandledFormat('GroundingSupport', support);
         }
         return GroundingSupport(
-          segmentMap: support,
+          segment: Segment(
+            support['startIndex'] as int,
+            support['endIndex'] as int,
+            support['text'] as String,
+          ),
           groundingChunkIndices:
               (support['groundingChunkIndices'] as List?)?.cast<int>() ?? [],
         );
@@ -1035,6 +1040,46 @@ class GroundingMetadata {
     required this.groundingChunks,
     required this.groundingSupports,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'webSearchQueries': webSearchQueries,
+      'searchEntryPoint': searchEntryPoint,
+      'groundingChunks': groundingChunks.map((x) => x.toMap()).toList(),
+      'groundingSupports': groundingSupports.map((x) => x.toMap()).toList(),
+    };
+  }
+
+  factory GroundingMetadata.fromMap(Map<String, dynamic> map) {
+    return GroundingMetadata(
+      webSearchQueries: map['webSearchQueries'] != null
+          ? List<String>.from(map['webSearchQueries'] as List<dynamic>)
+          : <String>[],
+      searchEntryPoint: map['searchEntryPoint'] != null
+          ? Map<String, String>.from(
+              map['searchEntryPoint'] as Map<dynamic, dynamic>)
+          : <String, String>{},
+      groundingChunks: map['groundingChunks'] != null
+          ? List<GroundingChunk>.from(
+              (map['groundingChunks'] as List<dynamic>).map(
+                (x) => GroundingChunk.fromMap(x as Map<String, dynamic>),
+              ),
+            )
+          : <GroundingChunk>[],
+      groundingSupports: map['groundingSupports'] != null
+          ? List<GroundingSupport>.from(
+              (map['groundingSupports'] as List<dynamic>).map(
+                (x) => GroundingSupport.fromMap(x as Map<String, dynamic>),
+              ),
+            )
+          : <GroundingSupport>[],
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory GroundingMetadata.fromJson(String source) =>
+      GroundingMetadata.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
 class GroundingChunk {
@@ -1043,20 +1088,55 @@ class GroundingChunk {
 
   GroundingChunk({required String uriString, required this.title})
       : uri = Uri.parse(uriString);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'uri': uri.toString(),
+      'title': title,
+    };
+  }
+
+  factory GroundingChunk.fromMap(Map<String, dynamic> map) {
+    return GroundingChunk(
+      uriString: map['uri'] as String,
+      title: map['title'] as String,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory GroundingChunk.fromJson(String source) =>
+      GroundingChunk.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
 class GroundingSupport {
   final Segment segment;
   final List<int> groundingChunkIndices;
 
-  GroundingSupport(
-      {required Map<String, Object?> segmentMap,
-      required this.groundingChunkIndices})
-      : segment = Segment(
-          segmentMap['startIndex'] as int,
-          segmentMap['endIndex'] as int,
-          segmentMap['text'] as String,
-        );
+  GroundingSupport({
+    required this.segment,
+    required this.groundingChunkIndices,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'segment': segment.toMap(),
+      'groundingChunkIndices': groundingChunkIndices,
+    };
+  }
+
+  factory GroundingSupport.fromMap(Map<String, dynamic> map) {
+    return GroundingSupport(
+      segment: Segment.fromMap(map['segment'] as Map<String, dynamic>),
+      groundingChunkIndices:
+          List<int>.from(map['groundingChunkIndices'] as List),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory GroundingSupport.fromJson(String source) =>
+      GroundingSupport.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
 class Segment {
@@ -1065,4 +1145,25 @@ class Segment {
   String text;
 
   Segment(this.startIndex, this.endIndex, this.text);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'startIndex': startIndex,
+      'endIndex': endIndex,
+      'text': text,
+    };
+  }
+
+  factory Segment.fromMap(Map<String, dynamic> map) {
+    return Segment(
+      map['startIndex'] as int,
+      map['endIndex'] as int,
+      map['text'] as String,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory Segment.fromJson(String source) =>
+      Segment.fromMap(json.decode(source) as Map<String, dynamic>);
 }
