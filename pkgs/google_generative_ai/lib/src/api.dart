@@ -828,7 +828,7 @@ Candidate _parseCandidate(Object? jsonObject) {
       _ => null,
     },
     switch (jsonObject) {
-      {'citationMetadata': final Object citationMetadata} =>
+      {'citationMetadata': final Object citationMetadata?} =>
         _parseCitationMetadata(citationMetadata),
       _ => null,
     },
@@ -843,7 +843,7 @@ Candidate _parseCandidate(Object? jsonObject) {
       _ => null,
     },
     switch (jsonObject) {
-      {'groundingMetadata': final Object groundingMetadata} =>
+      {'groundingMetadata': final Object groundingMetadata?} =>
         _parseGroundingMetadata(groundingMetadata),
       _ => null,
     },
@@ -1028,10 +1028,19 @@ GroundingMetadata _parseGroundingMetadata(Object? jsonObject) {
       groundingSupports: groundingSupports);
 }
 
+/// Metadata returned to the user as a part of the response that qualifies the
+/// answer.
 class GroundingMetadata {
+  /// A list of queries sent to the search engine.
   final List<String> webSearchQueries;
+
+  /// The entry point of the search.
   final Map<String, String> searchEntryPoint;
+
+  /// A list of grounding chunks.
   final List<GroundingChunk> groundingChunks;
+
+  /// A list of supporting references.
   final List<GroundingSupport> groundingSupports;
 
   GroundingMetadata({
@@ -1082,8 +1091,12 @@ class GroundingMetadata {
       GroundingMetadata.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
+/// A grounding chunk.
 class GroundingChunk {
+  /// The URI of the grounding chunk.
   final Uri uri;
+
+  /// The title of the grounding chunk.
   final String title;
 
   GroundingChunk({required String uriString, required this.title})
@@ -1109,8 +1122,12 @@ class GroundingChunk {
       GroundingChunk.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
+/// A supporting reference.
 class GroundingSupport {
+  /// The segment of the supporting reference.
   final Segment segment;
+
+  /// A list of grounding chunk indices.
   final List<int> groundingChunkIndices;
 
   GroundingSupport({
@@ -1139,9 +1156,15 @@ class GroundingSupport {
       GroundingSupport.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
+/// A segment of a supporting reference.
 class Segment {
+  /// The start index of the segment.
   int startIndex;
+
+  /// The end index of the segment.
   int endIndex;
+
+  /// The text of the segment.
   String text;
 
   Segment(this.startIndex, this.endIndex, this.text);
