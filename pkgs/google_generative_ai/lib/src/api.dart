@@ -753,18 +753,12 @@ GenerateContentResponse parseGenerateContentResponse(Object jsonObject) {
       ),
     _ => null,
   };
-  final groundingMetadata = switch (jsonObject) {
-    {'groundingMetadata': final groundingMetadata?} => _parseGroundingMetadata(
-        groundingMetadata,
-      ),
-    _ => null,
-  };
 
   return GenerateContentResponse(
     candidates,
     promptFeedback,
     usageMetadata: usageMedata,
-    groundingMetadata: groundingMetadata,
+    groundingMetadata: candidates.first.groundingMetadata,
   );
 }
 
@@ -843,7 +837,7 @@ Candidate _parseCandidate(Object? jsonObject) {
       _ => null,
     },
     switch (jsonObject) {
-      {'groundingMetadata': final Object groundingMetadata?} =>
+      {'groundingMetadata': final Object groundingMetadata} =>
         _parseGroundingMetadata(groundingMetadata),
       _ => null,
     },
@@ -1023,11 +1017,10 @@ class GroundingMetadata {
             )
           : <GroundingChunk>[],
       groundingSupports: map['groundingSupports'] != null
-          ? List<GroundingSupport>.from(
-              (map['groundingSupports'] as List<dynamic>).map(
-                (x) => GroundingSupport.fromMap(x as Map<String, dynamic>),
-              ),
-            )
+          ? List<Map<String, dynamic>>.from(
+                  map['groundingSupports'] as List<dynamic>)
+              .map((supportMap) => GroundingSupport.fromMap(supportMap))
+              .toList()
           : <GroundingSupport>[],
     );
   }
@@ -1109,10 +1102,10 @@ class GroundingSupport {
 /// A segment of a supporting reference.
 class Segment {
   /// The start index of the segment.
-  int startIndex;
+  int? startIndex;
 
   /// The end index of the segment.
-  int endIndex;
+  int? endIndex;
 
   /// The text of the segment.
   String text;
@@ -1129,8 +1122,8 @@ class Segment {
 
   factory Segment.fromMap(Map<String, dynamic> map) {
     return Segment(
-      map['startIndex'] as int,
-      map['endIndex'] as int,
+      map['startIndex'] as int?,
+      map['endIndex'] as int?,
       map['text'] as String,
     );
   }

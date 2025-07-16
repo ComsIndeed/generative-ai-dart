@@ -12,3 +12,6 @@ pubspec.lock
 # References
 vertex_ai_reference/
 javascript/
+
+# SECRETS
+API_KEY.txt
