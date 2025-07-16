@@ -53,15 +53,15 @@ void main() {
                 ],
               },
               'groundingMetadata': {
-                'groundingMetadata': {
-                  'webSearchQueries': ['why is the sky blue'],
-                  'groundingChunks': [
-                    {
+                'webSearchQueries': ['why is the sky blue'],
+                'groundingChunks': [
+                  {
+                    'web': {
                       'uri': 'https://en.wikipedia.org/wiki/Rayleigh_scattering',
-                      'title': 'Rayleigh scattering - Wikipedia'
-                    }
-                  ]
-                }
+                      'title': 'Rayleigh scattering - Wikipedia',
+                    },
+                  }
+                ]
               }
             }
           ],

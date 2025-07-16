@@ -133,6 +133,7 @@ void main() {
                 null,
                 null,
                 null,
+                null,
               ),
             ], null),
           ),
@@ -377,6 +378,7 @@ void main() {
                 GenerateContentResponse([
                   Candidate(
                     Content('model', [TextPart(result)]),
+                    null,
                     null,
                     null,
                     null,

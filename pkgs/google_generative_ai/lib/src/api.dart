@@ -972,60 +972,7 @@ GroundingMetadata _parseGroundingMetadata(Object? jsonObject) {
   if (jsonObject is! Map) {
     throw unhandledFormat('GroundingMetadata', jsonObject);
   }
-
-  final groundingMetadataObject = jsonObject['groundingMetadata'];
-  if (groundingMetadataObject is! Map) {
-    throw unhandledFormat('GroundingMetadata', groundingMetadataObject);
-  }
-
-  final webSearchQueries = switch (groundingMetadataObject) {
-    {'webSearchQueries': final List<Object?> queries} =>
-      queries.cast<String>().toList(),
-    _ => <String>[],
-  };
-
-  final searchEntryPoint = switch (groundingMetadataObject) {
-    {'searchEntryPoint': final Map<String, String> entryPoint} => entryPoint,
-    _ => <String, String>{},
-  };
-
-  final groundingChunks = switch (groundingMetadataObject) {
-    {'groundingChunks': final List<Object?> chunks} => chunks.map((chunk) {
-        if (chunk is! Map) {
-          throw unhandledFormat('GroundingChunk', chunk);
-        }
-        return GroundingChunk(
-          uriString: chunk['uri'] as String,
-          title: chunk['title'] as String,
-        );
-      }).toList(),
-    _ => <GroundingChunk>[],
-  };
-
-  final groundingSupports = switch (groundingMetadataObject) {
-    {'groundingSupports': final List<Object?> supports} =>
-      supports.map((support) {
-        if (support is! Map<String, Object?>) {
-          throw unhandledFormat('GroundingSupport', support);
-        }
-        return GroundingSupport(
-          segment: Segment(
-            support['startIndex'] as int,
-            support['endIndex'] as int,
-            support['text'] as String,
-          ),
-          groundingChunkIndices:
-              (support['groundingChunkIndices'] as List?)?.cast<int>() ?? [],
-        );
-      }).toList(),
-    _ => <GroundingSupport>[],
-  };
-
-  return GroundingMetadata(
-      webSearchQueries: webSearchQueries,
-      searchEntryPoint: searchEntryPoint,
-      groundingChunks: groundingChunks,
-      groundingSupports: groundingSupports);
+  return GroundingMetadata.fromMap(Map<String, dynamic>.from(jsonObject));
 }
 
 /// Metadata returned to the user as a part of the response that qualifies the
@@ -1104,15 +1051,18 @@ class GroundingChunk {
 
   Map<String, dynamic> toMap() {
     return {
-      'uri': uri.toString(),
-      'title': title,
+      'web': {
+        'uri': uri.toString(),
+        'title': title,
+      }
     };
   }
 
   factory GroundingChunk.fromMap(Map<String, dynamic> map) {
+    final web = map['web'] as Map<String, dynamic>;
     return GroundingChunk(
-      uriString: map['uri'] as String,
-      title: map['title'] as String,
+      uriString: web['uri'] as String,
+      title: web['title'] as String,
     );
   }
 

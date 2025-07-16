@@ -217,6 +217,7 @@ void main() {
                 null,
                 FinishReason.stop,
                 null,
+                null,
               ),
             ],
             PromptFeedback(null, null, [
@@ -350,6 +351,7 @@ void main() {
                   Citation(899, 1026, Uri.https('example.com', ''), ''),
                 ]),
                 FinishReason.stop,
+                null,
                 null,
               ),
             ],
@@ -485,6 +487,7 @@ void main() {
                 ]),
                 FinishReason.stop,
                 null,
+                null,
               ),
             ],
             PromptFeedback(null, null, [
@@ -552,6 +555,7 @@ void main() {
                 null,
                 FinishReason.stop,
                 null,
+                null,
               ),
             ],
             null,
@@ -613,6 +617,7 @@ void main() {
                 ],
                 CitationMetadata([]),
                 FinishReason.safety,
+                null,
                 null),
           ], null),
         ),
@@ -749,6 +754,31 @@ void main() {
       expect(() => parseGenerateContentResponse(decoded), expectedThrow);
       expect(() => parseCountTokensResponse(decoded), expectedThrow);
       expect(() => parseEmbedContentResponse(decoded), expectedThrow);
+    });
+
+    test('with null grounding metadata', () async {
+      final response = '''
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "placeholder"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "groundingMetadata": null
+    }
+  ]
+}
+''';
+      final decoded = jsonDecode(response) as Object;
+      final generateContentResponse = parseGenerateContentResponse(decoded);
+      expect(generateContentResponse.candidates.single.groundingMetadata, isNull);
     });
   });
 }
