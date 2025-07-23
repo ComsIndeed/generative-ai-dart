@@ -166,7 +166,7 @@ final class ChatSession {
   }
 }
 
-extension StartChatExtension on GenerativeModel {
+extension StartChatExtension on GenerativeModelInterface {
   /// Starts a [ChatSession] that will use this model to respond to messages.
   ///
   /// ```dart

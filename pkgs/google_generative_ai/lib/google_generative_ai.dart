@@ -66,6 +66,8 @@ export 'src/api.dart'
         UsageMetadata,
         ModalityTokenCount,
         ContentModality;
+export 'src/api.dart'
+    show GroundingMetadata, GroundingChunk, GroundingSupport, Segment;
 export 'src/chat.dart' show ChatSession, StartChatExtension;
 export 'src/content.dart'
     show
@@ -97,6 +99,6 @@ export 'src/function_calling.dart'
         SchemaType,
         Tool,
         ToolConfig;
-export 'src/model.dart' show GenerativeModel, RequestOptions;
 export 'src/function_calling.dart' show GoogleSearch;
-export 'src/api.dart' show GroundingMetadata, GroundingChunk, GroundingSupport, Segment;
+export 'src/model.dart'
+    show GenerativeModel, RequestOptions, GenerativeModelInterface;

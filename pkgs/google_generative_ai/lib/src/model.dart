@@ -16,7 +16,6 @@ import 'dart:async';
 
 import 'package:http/http.dart' as http;
 
-
 import 'api.dart';
 import 'client.dart';
 import 'content.dart';
@@ -47,11 +46,45 @@ final class RequestOptions {
   const RequestOptions({this.apiVersion});
 }
 
+/// An interface that defines the contract for generative AI models.
+abstract class GenerativeModelInterface {
+  Future<GenerateContentResponse> generateContent(
+    Iterable<Content> prompt, {
+    List<SafetySetting>? safetySettings,
+    GenerationConfig? generationConfig,
+    List<Tool>? tools,
+    ToolConfig? toolConfig,
+    List<ResponseModalities>? responseModalities,
+  });
+
+  Stream<GenerateContentResponse> generateContentStream(
+    Iterable<Content> prompt, {
+    List<SafetySetting>? safetySettings,
+    GenerationConfig? generationConfig,
+    List<Tool>? tools,
+    ToolConfig? toolConfig,
+    List<ResponseModalities>? responseModalities,
+  });
+
+  Future<EmbedContentResponse> embedContent(
+    Content content, {
+    TaskType? taskType,
+    String? title,
+    int? outputDimensionality,
+  });
+
+  Future<BatchEmbedContentsResponse> batchEmbedContents(
+    Iterable<EmbedContentRequest> requests,
+  );
+
+  Future<CountTokensResponse> countTokens(Iterable<Content> prompt);
+}
+
 /// A multimodel generative model (like Gemini).
 ///
 /// Allows generating content, creating embeddings, and counting the number of
 /// tokens in a piece of content.
-final class GenerativeModel {
+final class GenerativeModel implements GenerativeModelInterface {
   /// The full model code split into a prefix ("models" or "tunedModels") and
   /// the model name.
   final ({String prefix, String name}) _model;
@@ -163,6 +196,7 @@ final class GenerativeModel {
   /// final response = await model.generateContent([Content.text(prompt)]);
   /// print(response.text);
   /// ```
+  @override
   Future<GenerateContentResponse> generateContent(
     Iterable<Content> prompt, {
     List<SafetySetting>? safetySettings,
@@ -200,6 +234,7 @@ final class GenerativeModel {
   ///   print(response.text);
   /// }
   /// ```
+  @override
   Stream<GenerateContentResponse> generateContentStream(
     Iterable<Content> prompt, {
     List<SafetySetting>? safetySettings,
@@ -243,6 +278,7 @@ final class GenerativeModel {
   ///   print(response.text);
   /// }
   /// ```
+  @override
   Future<CountTokensResponse> countTokens(
     Iterable<Content> contents, {
     List<SafetySetting>? safetySettings,
@@ -273,6 +309,7 @@ final class GenerativeModel {
   /// final promptEmbedding =
   ///     (await model.embedContent([Content.text(prompt)])).embedding.values;
   /// ```
+  @override
   Future<EmbedContentResponse> embedContent(
     Content content, {
     TaskType? taskType,
@@ -304,6 +341,7 @@ final class GenerativeModel {
   /// final promptEmbeddings =
   ///     (await model.embedContent(requests)).embedding.values;
   /// ```
+  @override
   Future<BatchEmbedContentsResponse> batchEmbedContents(
     Iterable<EmbedContentRequest> requests,
   ) =>
@@ -341,7 +379,8 @@ final class GenerativeModel {
       if (_systemInstruction case final systemInstruction?)
         'systemInstruction': systemInstruction.toJson(),
       if (responseModalities case final responseModalities?)
-        'responseModalities': responseModalities.map((e) => e.toJson()).toList(),
+        'responseModalities':
+            responseModalities.map((e) => e.toJson()).toList(),
     };
   }
 }
