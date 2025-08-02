@@ -7,6 +7,11 @@ Gemini API. The Gemini API gives you access to Gemini
 Gemini models are built from the ground up to be multimodal, so you can reason
 seamlessly across text, images, and code.
 
+## Important!
+> ⚠️ This is an **unofficial fork** of the now-deprecated `google_generative_ai` Dart package.  
+> It is maintained independently to provide continued access to Gemini API features  
+> **without requiring Firebase or Vertex AI.** Not affiliated with or endorsed by Google.
+
 > [!CAUTION] **Using the Google AI SDK for Dart (Flutter) to call the Google AI
 > Gemini API directly from your app is recommended for prototyping only.** If
 > you plan to enable billing, we strongly recommend that you use the SDK to call
