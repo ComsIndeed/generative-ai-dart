@@ -11,6 +11,10 @@ seamlessly across text, images, and code.
 > ⚠️ This is an **unofficial fork** of the now-deprecated `google_generative_ai` Dart package.  
 > It is maintained independently to provide continued access to Gemini API features  
 > **without requiring Firebase or Vertex AI.** Not affiliated with or endorsed by Google.
+>
+> Features added within the fork:
+> - GoogleSearch (grounding) support
+> - UrlContext support (WIP)
 
 > [!CAUTION] **Using the Google AI SDK for Dart (Flutter) to call the Google AI
 > Gemini API directly from your app is recommended for prototyping only.** If
